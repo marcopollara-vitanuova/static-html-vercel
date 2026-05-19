@@ -1,39 +1,885 @@
 <!DOCTYPE html>
 <html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pagina statica su Vercel</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitanuova - Transformation Program Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      :root {
-        font-family: system-ui, sans-serif;
-        color-scheme: light dark;
-      }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(160deg, #0f172a, #1e3a5f);
-        color: #f8fafc;
-      }
-      main {
-        text-align: center;
-        padding: 2rem;
-      }
-      h1 {
-        font-size: clamp(1.5rem, 4vw, 2.5rem);
-        margin-bottom: 0.5rem;
-      }
-      p {
-        opacity: 0.9;
-      }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Required Chart Container Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            min-height: 350px;
+            max-height: 500px;
+        }
+
+        /* Custom Scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
-  </head>
-  <body>
-    <main>
-      <h1>Ciao da Vercel</h1>
-      <p>Pagina HTML statica deployata via Cursor.</p>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        corporate: {
+                            900: '#0f172a', // deep slate
+                            800: '#1e293b',
+                            700: '#334155',
+                            600: '#475569',
+                            500: '#64748b',
+                            100: '#f1f5f9',
+                            50: '#f8fafc',
+                        },
+                        accent: {
+                            blue: '#2563eb',
+                            teal: '#0d9488',
+                            red: '#dc2626',
+                            green: '#16a34a',
+                            amber: '#d97706'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<!-- Chosen Palette: Corporate Slate (Slate 50 to 900) with Semantic Accents (Blue for primary, Red/Amber for risks, Green for compliance) -->
+
+<!-- Application Structure Plan: A Dashboard layout with a fixed sidebar (bottom nav on mobile) was chosen. This allows executive stakeholders to easily switch between distinct analytical contexts (Executive Summary, Regulatory Analysis, Maturity/Gap, UX Design, and Architecture) without losing their place. The linear report is transformed into a non-linear explorative tool, prioritizing high-level KPIs first, then allowing drill-down into specific compliance, UX, and technical details. -->
+
+<!-- Visualization & Content Choices: 
+1. Executive Summary -> Goal: Inform -> Dynamic Stats/Cards -> Interaction: Quick overview -> Justification: Immediate context setting. 
+2. Gap/Maturity -> Goal: Compare As-Is vs To-Be -> Radar Chart (Chart.js) -> Interaction: Hover tooltips -> Justification: Best for multi-dimensional maturity scoring. 
+3. Regulatory Matrix -> Goal: Organize -> Interactive Grid & Detail Panel -> Interaction: Click card to view details -> Justification: Prevents text overload, allows focused reading on specific regulations. 
+4. UX Compliance -> Goal: Change -> Toggle Before/After UI Mockup -> Interaction: Button toggle -> Justification: Visually demonstrates the "Dark Pattern" concept far better than text. 
+5. Architecture -> Goal: Organize/Relationships -> CSS Grid Block Diagram -> Interaction: None (static map) -> Justification: Clear structural overview of the EDA microservices without relying on SVGs. 
+Library/Method: Tailwind CSS, Vanilla JS, Chart.js. Confirming NO SVG/Mermaid. -->
+
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<body class="text-corporate-800 flex flex-col md:flex-row min-h-screen">
+
+    <!-- Mobile Header -->
+    <header class="md:hidden bg-corporate-900 text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-md">
+        <div class="font-bold text-xl tracking-tight">Vitanuova <span class="text-accent-teal font-light">Transformation</span></div>
+        <button id="mobileMenuBtn" class="text-white focus:outline-none">
+            <i class="fas fa-bars text-2xl"></i>
+        </button>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="bg-corporate-900 text-corporate-100 w-full md:w-72 flex-shrink-0 fixed md:sticky top-0 h-screen z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shadow-xl flex flex-col">
+        <div class="p-6 hidden md:block border-b border-corporate-700">
+            <div class="font-bold text-2xl tracking-tight text-white">Vitanuova</div>
+            <div class="text-accent-teal text-sm font-medium tracking-widest uppercase mt-1">Compliant-by-Design</div>
+        </div>
+        
+        <div class="flex-grow overflow-y-auto py-4">
+            <ul class="space-y-1 px-3">
+                <li>
+                    <button data-target="dashboard" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors bg-corporate-800 text-white font-medium border-l-4 border-accent-teal">
+                        <i class="fas fa-chart-line w-5 text-center"></i>
+                        <span>Executive Summary</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-target="regulations" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors text-corporate-100 font-medium border-l-4 border-transparent hover:border-corporate-500">
+                        <i class="fas fa-scale-balanced w-5 text-center"></i>
+                        <span>Quadro Normativo</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-target="maturity" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors text-corporate-100 font-medium border-l-4 border-transparent hover:border-corporate-500">
+                        <i class="fas fa-radar w-5 text-center"></i>
+                        <span>Maturity & Gap Analysis</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-target="ux" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors text-corporate-100 font-medium border-l-4 border-transparent hover:border-corporate-500">
+                        <i class="fas fa-mobile-screen w-5 text-center"></i>
+                        <span>UX Compliance</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-target="architecture" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors text-corporate-100 font-medium border-l-4 border-transparent hover:border-corporate-500">
+                        <i class="fas fa-network-wired w-5 text-center"></i>
+                        <span>Architettura Target</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-target="roadmap" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-corporate-800 transition-colors text-corporate-100 font-medium border-l-4 border-transparent hover:border-corporate-500">
+                        <i class="fas fa-road w-5 text-center"></i>
+                        <span>Roadmap & Rollout</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="p-6 border-t border-corporate-700">
+            <div class="text-xs text-corporate-500 mb-2">SCADENZA NORMATIVA</div>
+            <div class="font-bold text-accent-red text-lg flex items-center">
+                <i class="far fa-calendar-alt mr-2"></i> 19 Giugno 2026
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-7xl mx-auto p-4 md:p-8 overflow-x-hidden">
+
+        <!-- SECTION: EXECUTIVE SUMMARY -->
+        <section id="dashboard" class="view-section active">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">Programma di Trasformazione Enterprise</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">Questa sezione fornisce una visione strategica ad alto livello della trasformazione di Vitanuova. Illustra il passaggio fondamentale da una piattaforma focalizzata esclusivamente sulla conversione commerciale a un'infrastruttura di distribuzione assicurativa regolamentata, spinta dai nuovi requisiti normativi europei.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div class="bg-white rounded-xl shadow-sm border border-corporate-100 p-6 flex flex-col items-center text-center">
+                    <div class="w-12 h-12 bg-blue-100 text-accent-blue rounded-full flex items-center justify-center mb-4 text-xl">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold text-corporate-500 uppercase tracking-wide">Obiettivo Principale</h3>
+                    <p class="text-xl font-bold text-corporate-900 mt-1">Compliant-by-Design</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-corporate-100 p-6 flex flex-col items-center text-center">
+                    <div class="w-12 h-12 bg-red-100 text-accent-red rounded-full flex items-center justify-center mb-4 text-xl">
+                        <i class="fas fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold text-corporate-500 uppercase tracking-wide">Rischio Sanzionatorio</h3>
+                    <p class="text-xl font-bold text-corporate-900 mt-1">Fino al 10% Fatturato</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-corporate-100 p-6 flex flex-col items-center text-center">
+                    <div class="w-12 h-12 bg-teal-100 text-accent-teal rounded-full flex items-center justify-center mb-4 text-xl">
+                        <i class="fas fa-stopwatch"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold text-corporate-500 uppercase tracking-wide">Deadline IVASS</h3>
+                    <p class="text-xl font-bold text-corporate-900 mt-1">19 Giugno 2026</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-corporate-100 p-6 flex flex-col items-center text-center">
+                    <div class="w-12 h-12 bg-amber-100 text-accent-amber rounded-full flex items-center justify-center mb-4 text-xl">
+                        <i class="fas fa-code-branch"></i>
+                    </div>
+                    <h3 class="text-sm font-semibold text-corporate-500 uppercase tracking-wide">Architettura Target</h3>
+                    <p class="text-xl font-bold text-corporate-900 mt-1">Event-Driven (EDA)</p>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-corporate-900 mb-6">Il Cambio di Paradigma</h2>
+            <div class="flex flex-col md:flex-row gap-4 items-stretch mb-8">
+                <div class="flex-1 bg-white p-6 rounded-xl border-l-4 border-corporate-400 shadow-sm opacity-80">
+                    <h3 class="text-lg font-bold text-corporate-800 mb-3 flex items-center"><i class="fas fa-history mr-2 text-corporate-500"></i> Paradigma Passato: "Commercial-First"</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start"><i class="fas fa-times text-accent-red mt-1 mr-2"></i> <span><strong>Focus:</strong> Massimizzazione conversioni (funnel spinto, dark patterns).</span></li>
+                        <li class="flex items-start"><i class="fas fa-times text-accent-red mt-1 mr-2"></i> <span><strong>Compliance:</strong> Documentale e manuale (raccolta firme post-vendita).</span></li>
+                        <li class="flex items-start"><i class="fas fa-times text-accent-red mt-1 mr-2"></i> <span><strong>Processi:</strong> Silos applicativi, integrazioni API sincrone fragili.</span></li>
+                    </ul>
+                </div>
+                
+                <div class="hidden md:flex flex-col justify-center items-center px-4">
+                    <i class="fas fa-arrow-right text-3xl text-corporate-300"></i>
+                </div>
+                <div class="md:hidden flex justify-center py-2">
+                    <i class="fas fa-arrow-down text-3xl text-corporate-300"></i>
+                </div>
+
+                <div class="flex-1 bg-white p-6 rounded-xl border-l-4 border-accent-teal shadow-md ring-2 ring-accent-teal ring-opacity-20 transform md:scale-105">
+                    <h3 class="text-lg font-bold text-corporate-900 mb-3 flex items-center"><i class="fas fa-check-circle mr-2 text-accent-teal"></i> Paradigma Target: "Compliant-by-Design"</h3>
+                    <ul class="space-y-3 text-sm">
+                        <li class="flex items-start"><i class="fas fa-check text-accent-teal mt-1 mr-2"></i> <span><strong>Focus:</strong> Trasparenza assoluta, tutela consumatore, zero attrito nel recesso.</span></li>
+                        <li class="flex items-start"><i class="fas fa-check text-accent-teal mt-1 mr-2"></i> <span><strong>Compliance:</strong> Comportamentale (Audit Trail Immutabile WORM).</span></li>
+                        <li class="flex items-start"><i class="fas fa-check text-accent-teal mt-1 mr-2"></i> <span><strong>Processi:</strong> Orchestrazione a eventi (Kafka), resilienza DORA, AI Governance.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: REGULATORY RADAR -->
+        <section id="regulations" class="view-section">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">Quadro Normativo Cogente</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">Esplora i dettagli delle normative europee e nazionali che impattano Vitanuova. Clicca su ciascuna area normativa per visualizzare gli obblighi specifici, gli impatti architetturali, i rischi e il piano di remediation previsto.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Regulation List -->
+                <div class="lg:col-span-1 space-y-3" id="regulation-list">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Regulation Detail Panel -->
+                <div class="lg:col-span-2">
+                    <div id="regulation-detail" class="bg-white rounded-xl shadow-md border border-corporate-200 p-6 md:p-8 h-full">
+                        <div class="text-center text-corporate-400 py-20">
+                            <i class="fas fa-hand-pointer text-4xl mb-4"></i>
+                            <p>Seleziona una normativa per visualizzarne i dettagli e la matrice di rischio.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: MATURITY & GAP -->
+        <section id="maturity" class="view-section">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">Maturity Assessment & Gap Analysis</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">Un'analisi quantitativa dello stato attuale (As-Is) rispetto allo stato obiettivo (To-Be) su una scala da 1 a 5. Il grafico radar evidenzia le aree di maggiore vulnerabilità che richiedono interventi architetturali immediati.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-corporate-200">
+                    <h3 class="text-xl font-bold text-corporate-900 mb-6 text-center">Gap Analysis Multidimensionale</h3>
+                    <!-- CHART CONTAINER: Strictly adhering to sizing constraints -->
+                    <div class="chart-container">
+                        <canvas id="maturityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-red-50 border border-red-100 p-5 rounded-lg">
+                        <h4 class="font-bold text-accent-red flex items-center"><i class="fas fa-fire mr-2"></i> Gap 1: Recesso non-equivalente</h4>
+                        <p class="text-sm mt-2 text-corporate-700">Acquisizione fluida vs Recesso manuale (raccomandate/PEC clienti). Violazione del principio di simmetria IVASS. <br><strong>Rischio:</strong> Nullità contratti.</p>
+                    </div>
+                    <div class="bg-red-50 border border-red-100 p-5 rounded-lg">
+                        <h4 class="font-bold text-accent-red flex items-center"><i class="fas fa-database mr-2"></i> Gap 2: Assenza Audit Trail WORM</h4>
+                        <p class="text-sm mt-2 text-corporate-700">Log attuali su DB PostgreSQL modificabile. Mancanza di "prova della volontà" opponibile. <br><strong>Rischio:</strong> Inversione onere della prova (GDPR/IVASS).</p>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-100 p-5 rounded-lg">
+                        <h4 class="font-bold text-accent-amber flex items-center"><i class="fas fa-network-wired mr-2"></i> Gap 3: API Sincrone (Rischio DORA)</h4>
+                        <p class="text-sm mt-2 text-corporate-700">Integrazione sincrona con Compagnie. Se l'API partner cade, il flusso Vitanuova si blocca. <br><strong>Rischio:</strong> Violazione Business Continuity.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: UX COMPLIANCE -->
+        <section id="ux" class="view-section">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">UX Compliance & Zero Dark Patterns</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">La compliance non è più solo documentale, ma comportamentale. Questa sezione dimostra la trasformazione dell'interfaccia utente, eliminando pratiche manipolative (Dark Patterns) come le pre-spunte e garantendo parità visiva nelle scelte.</p>
+            </div>
+
+            <div class="bg-corporate-900 rounded-xl p-6 text-white mb-8 flex flex-col md:flex-row justify-between items-center shadow-lg">
+                <div>
+                    <h3 class="text-xl font-bold">Simulazione Interfaccia Checkout</h3>
+                    <p class="text-corporate-300 text-sm mt-1">Confronta il design attuale (manipolativo) con il design target (compliant).</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex bg-corporate-800 p-1 rounded-lg">
+                    <button id="btn-asis" class="px-6 py-2 rounded-md font-medium transition-all bg-accent-red text-white shadow-sm">As-Is (Dark Pattern)</button>
+                    <button id="btn-tobe" class="px-6 py-2 rounded-md font-medium transition-all text-corporate-300 hover:text-white">To-Be (Compliant)</button>
+                </div>
+            </div>
+
+            <!-- UX Mockup Container -->
+            <div class="relative bg-white border border-corporate-200 rounded-xl shadow-md overflow-hidden max-w-3xl mx-auto h-[450px]">
+                
+                <!-- AS-IS UI -->
+                <div id="ui-asis" class="absolute inset-0 p-8 transition-opacity duration-300 opacity-100 z-10 flex flex-col">
+                    <div class="bg-red-50 text-accent-red text-xs font-bold px-3 py-1 rounded-full w-max mb-4 uppercase tracking-wide border border-red-200">Non Conforme (Rischio Sanzione)</div>
+                    <h4 class="text-xl font-bold mb-6 text-gray-800">Scegli la tua Polizza Auto base:</h4>
+                    
+                    <div class="flex justify-between items-center p-4 border border-gray-200 rounded-lg mb-6 bg-gray-50">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-square text-accent-blue text-xl mr-3"></i>
+                            <span class="font-medium text-gray-700">Polizza RCA Standard</span>
+                        </div>
+                        <span class="font-bold text-gray-800">€ 320/anno</span>
+                    </div>
+
+                    <p class="font-semibold text-gray-700 mb-3">Garanzie consigliate (già attive):</p>
+                    <div class="space-y-3 mb-8">
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-check-square text-accent-blue text-lg mr-3"></i> 
+                            <span>Polizza Cristalli <span class="text-sm font-bold ml-2">€ 45/anno</span></span>
+                            <span class="ml-auto text-xs text-accent-red font-bold">PRE-SPUNTA ILLEGITTIMA</span>
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <i class="fas fa-check-square text-accent-blue text-lg mr-3"></i> 
+                            <span>Assistenza Stradale Gold <span class="text-sm font-bold ml-2">€ 60/anno</span></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto flex flex-col items-center">
+                        <!-- Visual Misdirection CTA -->
+                        <button class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-lg shadow-lg text-lg mb-3">
+                            CONFERMA E PAGA ORA (CON ASSISTENZA)
+                        </button>
+                        <!-- Confirmshaming -->
+                        <a href="#" class="text-xs text-gray-400 hover:text-gray-500 underline">
+                            Non voglio viaggiare sicuro e preferisco rischiare incidenti senza assistenza
+                        </a>
+                    </div>
+                </div>
+
+                <!-- TO-BE UI -->
+                <div id="ui-tobe" class="absolute inset-0 p-8 transition-opacity duration-300 opacity-0 z-0 flex flex-col bg-slate-50">
+                    <div class="bg-teal-50 text-accent-teal text-xs font-bold px-3 py-1 rounded-full w-max mb-4 uppercase tracking-wide border border-teal-200">Compliant-by-Design</div>
+                    <h4 class="text-xl font-bold mb-6 text-gray-800">Scegli la tua Polizza Auto base:</h4>
+                    
+                    <div class="flex justify-between items-center p-4 border border-gray-200 rounded-lg mb-6 bg-white">
+                        <div class="flex items-center">
+                            <i class="far fa-square text-gray-400 text-xl mr-3"></i>
+                            <span class="font-medium text-gray-700">Polizza RCA Standard</span>
+                        </div>
+                        <span class="font-bold text-gray-800">€ 320/anno</span>
+                    </div>
+
+                    <p class="font-semibold text-gray-700 mb-3">Desideri aggiungere garanzie opzionali?</p>
+                    <div class="space-y-3 mb-8">
+                        <div class="flex items-center text-gray-600 bg-white p-2 rounded border border-gray-100">
+                            <i class="far fa-square text-gray-400 text-lg mr-3"></i> 
+                            <span>Polizza Cristalli <span class="text-sm font-bold ml-2">+€ 45/anno</span></span>
+                            <span class="ml-auto text-xs text-accent-teal font-bold">ACTIVE OPT-IN</span>
+                        </div>
+                        <div class="flex items-center text-gray-600 bg-white p-2 rounded border border-gray-100">
+                            <i class="far fa-square text-gray-400 text-lg mr-3"></i> 
+                            <span>Assistenza Stradale Gold <span class="text-sm font-bold ml-2">+€ 60/anno</span></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto flex flex-row space-x-4">
+                        <!-- Symmetrical CTAs -->
+                        <button class="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 transition-colors">
+                            RIFIUTA COPERTURE
+                        </button>
+                        <button class="flex-1 bg-accent-blue text-white font-semibold py-3 rounded-lg shadow-sm hover:bg-blue-700 transition-colors">
+                            ACCETTA SELEZIONE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: ARCHITECTURE -->
+        <section id="architecture" class="view-section">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">Architettura Target (Event-Driven)</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">Rappresentazione logica della nuova architettura a microservizi asincroni. L'uso di un Message Broker (Kafka) disaccoppia i processi, garantendo resilienza DORA, mentre il database WORM (Write Once, Read Many) assicura l'immutabilità dell'Audit Trail richiesta dal GDPR e dall'IVASS.</p>
+            </div>
+
+            <div class="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-corporate-200 overflow-x-auto">
+                <div class="min-w-[800px]">
+                    <!-- Client Layer -->
+                    <div class="flex justify-center mb-6">
+                        <div class="bg-corporate-100 border-2 border-corporate-300 rounded-lg py-3 px-8 text-center shadow-sm w-64 relative">
+                            <i class="fas fa-laptop-mobile text-2xl text-corporate-600 mb-2"></i>
+                            <div class="font-bold text-corporate-800">Public Frontend / Area Clienti</div>
+                            <div class="text-xs text-corporate-500">React / Next.js (HTTPS / TLS 1.3)</div>
+                            
+                            <!-- Arrow down -->
+                            <div class="absolute left-1/2 -bottom-6 w-0.5 h-6 bg-corporate-300"></div>
+                            <div class="absolute left-1/2 -bottom-6 transform -translate-x-1/2 translate-y-full text-corporate-300"><i class="fas fa-chevron-down"></i></div>
+                        </div>
+                    </div>
+
+                    <!-- API Gateway -->
+                    <div class="flex justify-center mb-10 mt-8">
+                        <div class="bg-accent-blue text-white rounded-lg py-3 px-20 text-center shadow-md relative z-10 w-full max-w-2xl">
+                            <i class="fas fa-network-wired text-xl mb-1"></i>
+                            <div class="font-bold tracking-widest uppercase">API Gateway</div>
+                            <div class="text-xs opacity-80">Routing, Rate Limiting, TLS Termination</div>
+
+                            <!-- Lines down to services -->
+                            <div class="absolute left-1/4 -bottom-8 w-0.5 h-8 bg-corporate-300"></div>
+                            <div class="absolute left-1/2 -bottom-8 w-0.5 h-8 bg-corporate-300"></div>
+                            <div class="absolute left-3/4 -bottom-8 w-0.5 h-8 bg-corporate-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- Microservices Layer -->
+                    <div class="grid grid-cols-3 gap-6 mb-10 mt-8 max-w-4xl mx-auto relative">
+                        <div class="bg-white border-2 border-indigo-200 rounded-lg p-4 text-center shadow-sm">
+                            <i class="fas fa-id-card text-indigo-500 text-2xl mb-2"></i>
+                            <div class="font-bold text-corporate-800 text-sm">Identity Engine</div>
+                            <div class="text-xs text-corporate-500 mt-1">OIDC / MFA (OTP)</div>
+                        </div>
+                        <div class="bg-white border-2 border-indigo-200 rounded-lg p-4 text-center shadow-sm relative">
+                            <i class="fas fa-cogs text-indigo-500 text-2xl mb-2"></i>
+                            <div class="font-bold text-corporate-800 text-sm">Workflow Engine</div>
+                            <div class="text-xs text-corporate-500 mt-1">Temporal / NestJS</div>
+                        </div>
+                        <div class="bg-teal-50 border-2 border-teal-300 rounded-lg p-4 text-center shadow-sm ring-2 ring-teal-200 ring-offset-2">
+                            <i class="fas fa-file-signature text-accent-teal text-2xl mb-2"></i>
+                            <div class="font-bold text-corporate-900 text-sm">Compliance Audit</div>
+                            <div class="text-xs text-corporate-600 mt-1 font-semibold">WORM Storage (Immutabile)</div>
+                        </div>
+                    </div>
+
+                    <!-- Message Broker -->
+                    <div class="flex justify-center mb-10">
+                        <div class="bg-corporate-800 text-white rounded-lg py-4 px-8 text-center shadow-md w-full max-w-3xl relative">
+                            <!-- Arrows from services -->
+                            <div class="absolute left-1/6 -top-6 w-0.5 h-6 bg-corporate-300"></div>
+                            <div class="absolute left-1/2 -top-6 w-0.5 h-6 bg-corporate-300"></div>
+                            <div class="absolute right-1/6 -top-6 w-0.5 h-6 bg-corporate-300"></div>
+                            
+                            <i class="fas fa-random text-2xl mb-2 text-corporate-300"></i>
+                            <div class="font-bold text-lg tracking-widest uppercase">Event Broker / Message Bus</div>
+                            <div class="text-sm text-corporate-300">Apache Kafka (Resilient Queue)</div>
+                            
+                            <!-- Arrows to bottom services -->
+                            <div class="absolute left-1/3 -bottom-6 w-0.5 h-6 bg-corporate-300"></div>
+                            <div class="absolute left-2/3 -bottom-6 w-0.5 h-6 bg-corporate-300"></div>
+                        </div>
+                    </div>
+
+                    <!-- Output Services -->
+                    <div class="grid grid-cols-2 gap-10 max-w-2xl mx-auto mt-6">
+                        <div class="bg-white border-2 border-corporate-200 rounded-lg p-4 text-center shadow-sm">
+                            <i class="fas fa-envelope-open-text text-corporate-500 text-2xl mb-2"></i>
+                            <div class="font-bold text-corporate-800 text-sm">Notification Service</div>
+                            <div class="text-xs text-corporate-500 mt-1">Integrazione PEC Automatica con Retry</div>
+                        </div>
+                        <div class="bg-white border-2 border-corporate-200 rounded-lg p-4 text-center shadow-sm">
+                            <i class="fas fa-robot text-corporate-500 text-2xl mb-2"></i>
+                            <div class="font-bold text-corporate-800 text-sm">AI Governance</div>
+                            <div class="text-xs text-corporate-500 mt-1">Explainability Logs & Human Oversight</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: ROADMAP -->
+        <section id="roadmap" class="view-section">
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-corporate-900 mb-4">Roadmap Implementativa</h1>
+                <p class="text-lg text-corporate-600 max-w-4xl">Piano operativo strutturato in 5 fasi per garantire la transizione tecnologica e normativa entro il 19 Giugno 2026. L'approccio Agile assicura testing continuo e mitigazione dei rischi (RAID Log) prima del rollout in produzione.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-corporate-200 p-6 md:p-8">
+                <div class="relative border-l-2 border-corporate-200 ml-3 md:ml-6 space-y-12">
+                    
+                    <!-- Phase 1 -->
+                    <div class="relative">
+                        <div class="absolute -left-3.5 md:-left-6.5 mt-1.5 w-7 h-7 bg-white border-4 border-accent-blue rounded-full"></div>
+                        <div class="ml-8 md:ml-12">
+                            <div class="inline-block px-3 py-1 bg-blue-100 text-accent-blue text-xs font-bold rounded-full mb-2">Settimane 1-2</div>
+                            <h3 class="text-xl font-bold text-corporate-900">Fase 1: Assessment & Legal Gap Analysis</h3>
+                            <p class="mt-2 text-corporate-600">Recupero dello storico comunicazioni PEC con le compagnie. Bonifica legale del wording e review completa delle interfacce attuali (UX Findings).</p>
+                            <div class="mt-3 bg-corporate-50 p-3 rounded text-sm text-corporate-700 border-l-2 border-corporate-300">
+                                <strong>Deliverables:</strong> Legal Consistency Matrix, UX Assessment Report, AI Inventory.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 2 -->
+                    <div class="relative">
+                        <div class="absolute -left-3.5 md:-left-6.5 mt-1.5 w-7 h-7 bg-white border-4 border-accent-blue rounded-full"></div>
+                        <div class="ml-8 md:ml-12">
+                            <div class="inline-block px-3 py-1 bg-blue-100 text-accent-blue text-xs font-bold rounded-full mb-2">Settimane 3-6</div>
+                            <h3 class="text-xl font-bold text-corporate-900">Fase 2: Foundation & Event-Driven Engine</h3>
+                            <p class="mt-2 text-corporate-600">Installazione cluster Kafka e sviluppo dei microservizi core per l'orchestrazione. Configurazione delle tabelle DB con politiche di immutabilità WORM.</p>
+                            <div class="mt-3 bg-corporate-50 p-3 rounded text-sm text-corporate-700 border-l-2 border-corporate-300">
+                                <strong>Deliverables:</strong> Workflow Engine (Temporal), WORM Audit Framework setup.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 3 -->
+                    <div class="relative">
+                        <div class="absolute -left-3.5 md:-left-6.5 mt-1.5 w-7 h-7 bg-white border-4 border-accent-blue rounded-full"></div>
+                        <div class="ml-8 md:ml-12">
+                            <div class="inline-block px-3 py-1 bg-blue-100 text-accent-blue text-xs font-bold rounded-full mb-2">Settimane 7-10</div>
+                            <h3 class="text-xl font-bold text-corporate-900">Fase 3: UX Compliance & Recesso Frontend</h3>
+                            <p class="mt-2 text-corporate-600">Eliminazione pre-spunte (Dark Patterns) nel funnel di vendita. Rilascio del portale self-service per il recesso digitale tramite OTP.</p>
+                            <div class="mt-3 bg-corporate-50 p-3 rounded text-sm text-corporate-700 border-l-2 border-corporate-300">
+                                <strong>Deliverables:</strong> Area Clienti aggiornata, Funnel di acquisto "Compliant-by-Design".
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 4 -->
+                    <div class="relative">
+                        <div class="absolute -left-3.5 md:-left-6.5 mt-1.5 w-7 h-7 bg-white border-4 border-accent-amber rounded-full"></div>
+                        <div class="ml-8 md:ml-12">
+                            <div class="inline-block px-3 py-1 bg-amber-100 text-accent-amber text-xs font-bold rounded-full mb-2">Settimane 11-13</div>
+                            <h3 class="text-xl font-bold text-corporate-900">Fase 4: Resilience Testing & DORA Audit</h3>
+                            <p class="mt-2 text-corporate-600">Simulazione di scenari di blocco API compagnie (Circuit Breaker testing). Test di penetrazione e verifica della business continuity.</p>
+                            <div class="mt-3 bg-corporate-50 p-3 rounded text-sm text-corporate-700 border-l-2 border-corporate-300">
+                                <strong>Deliverables:</strong> DR Simulation Report, DORA Compliance Checklist.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Phase 5 -->
+                    <div class="relative">
+                        <div class="absolute -left-3.5 md:-left-6.5 mt-1.5 w-7 h-7 bg-white border-4 border-corporate-300 rounded-full"></div>
+                        <div class="ml-8 md:ml-12">
+                            <div class="inline-block px-3 py-1 bg-corporate-100 text-corporate-600 text-xs font-bold rounded-full mb-2">Settimane 14-15</div>
+                            <h3 class="text-xl font-bold text-corporate-900 text-corporate-400">Fase 5: Rollout & Go-Live</h3>
+                            <p class="mt-2 text-corporate-500">Formazione Customer Care. Rollout progressivo (Canary Release al 5% poi 100%) con monitoraggio attivo degli SLA di consegna PEC.</p>
+                            <div class="mt-3 bg-corporate-50 p-3 rounded text-sm text-corporate-500 border-l-2 border-corporate-200">
+                                <strong>Deliverables:</strong> Go-Live completo.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
     </main>
-  </body>
+
+    <script>
+        // --- 1. DATA STORAGE & STATE ---
+        const state = {
+            currentView: 'dashboard',
+            maturityChartInstance: null
+        };
+
+        const regulatoryData = [
+            {
+                id: 'ivass',
+                title: 'IVASS',
+                subtitle: 'Distribuzione & Recesso',
+                icon: 'fa-file-signature',
+                color: 'text-blue-600',
+                bgColor: 'bg-blue-50',
+                borderColor: 'border-blue-200',
+                details: {
+                    obligations: ["Trasparenza precontrattuale mobile-first.", "Divieto assoluto di opt-in pre-selezionati (Dark Patterns).", "Meccanismo di recesso online semplice e simmetrico."],
+                    impact: "Implementazione portale recesso self-service e integrazione PEC automatizzata.",
+                    risk: "Nullità contratto (art. 117-bis CAP); Sanzioni fino 10% fatturato.",
+                    riskLevel: "ALTO",
+                    remediation: "Riprogettazione UX funnel; Orchestrator per recesso."
+                }
+            },
+            {
+                id: 'dora',
+                title: 'DORA',
+                subtitle: 'Cyber Resilience (EU 2022/2554)',
+                icon: 'fa-network-wired',
+                color: 'text-purple-600',
+                bgColor: 'bg-purple-50',
+                borderColor: 'border-purple-200',
+                details: {
+                    obligations: ["Monitoraggio continuo incidenti ICT.", "Business continuity rigorosa.", "Gestione rischio terze parti (Compagnie API)."],
+                    impact: "Disaccoppiamento dipendenze via Message Broker (Kafka); code di retry.",
+                    risk: "Risoluzione contratti di collaborazione; sanzioni dirette.",
+                    riskLevel: "CRITICO",
+                    remediation: "Architettura Event-Driven; gestione asincrona stati."
+                }
+            },
+            {
+                id: 'gdpr',
+                title: 'GDPR',
+                subtitle: 'Consenso & Immutabilità',
+                icon: 'fa-user-shield',
+                color: 'text-teal-600',
+                bgColor: 'bg-teal-50',
+                borderColor: 'border-teal-200',
+                details: {
+                    obligations: ["Tracciabilità incrollabile del consenso prestato (Proof of Intent).", "Limitazione profilazione non autorizzata (Art. 22)."],
+                    impact: "Database WORM per audit log separati dai dati anagrafici; Hashing crittografico.",
+                    risk: "Sanzioni fino a 20M€ o 4% fatturato mondiale.",
+                    riskLevel: "ALTO",
+                    remediation: "Sviluppo Audit Trail WORM Service; Consent Manager centralizzato."
+                }
+            },
+            {
+                id: 'aiact',
+                title: 'EU AI Act',
+                subtitle: 'Trasparenza & Oversight',
+                icon: 'fa-robot',
+                color: 'text-amber-600',
+                bgColor: 'bg-amber-50',
+                borderColor: 'border-amber-200',
+                details: {
+                    obligations: ["Explainability delle raccomandazioni polizze.", "Supervisione umana (Human Oversight) garantita.", "Dichiarare interazione con AI."],
+                    impact: "Logging strutturato input/output dell'engine; flussi di escalation umana.",
+                    risk: "Sanzioni fino a 35M€ o 7% fatturato globale.",
+                    riskLevel: "MEDIO",
+                    remediation: "Explainability Logger; Override manuale intermediari fisici."
+                }
+            },
+            {
+                id: 'nis2',
+                title: 'NIS2',
+                subtitle: 'Sicurezza Reti',
+                icon: 'fa-shield-virus',
+                color: 'text-slate-600',
+                bgColor: 'bg-slate-50',
+                borderColor: 'border-slate-200',
+                details: {
+                    obligations: ["Notifica incidenti gravi (CSIRT) entro 24 ore.", "Sicurezza supply chain."],
+                    impact: "Centralizzazione log (SIEM), crittografia E2E.",
+                    risk: "Sanzioni pecuniarie; responsabilità top management.",
+                    riskLevel: "MEDIO",
+                    remediation: "Strumenti SIEM integrati; classificazione incidenti automatica."
+                }
+            }
+        ];
+
+        // --- 2. CORE INTERACTION HANDLING ---
+        
+        // Navigation Logic
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.currentTarget.getAttribute('data-target');
+                    
+                    // Update Active Button styling
+                    navButtons.forEach(b => {
+                        b.classList.remove('bg-corporate-800', 'text-white', 'border-accent-teal');
+                        b.classList.add('text-corporate-100', 'border-transparent');
+                    });
+                    e.currentTarget.classList.remove('text-corporate-100', 'border-transparent');
+                    e.currentTarget.classList.add('bg-corporate-800', 'text-white', 'border-accent-teal');
+
+                    // Switch Section
+                    document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+                    document.getElementById(targetId).classList.add('active');
+                    state.currentView = targetId;
+
+                    // Trigger specific logic on view load
+                    if (targetId === 'maturity' && !state.maturityChartInstance) {
+                        renderMaturityChart();
+                    }
+
+                    // Close mobile menu if open
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+            });
+
+            mobileMenuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+            });
+        }
+
+        // UX Toggle Logic
+        function setupUXToggle() {
+            const btnAsIs = document.getElementById('btn-asis');
+            const btnToBe = document.getElementById('btn-tobe');
+            const uiAsIs = document.getElementById('ui-asis');
+            const uiToBe = document.getElementById('ui-tobe');
+
+            btnAsIs.addEventListener('click', () => {
+                btnAsIs.className = "px-6 py-2 rounded-md font-medium transition-all bg-accent-red text-white shadow-sm";
+                btnToBe.className = "px-6 py-2 rounded-md font-medium transition-all text-corporate-300 hover:text-white";
+                uiAsIs.classList.remove('opacity-0', 'z-0');
+                uiAsIs.classList.add('opacity-100', 'z-10');
+                uiToBe.classList.remove('opacity-100', 'z-10');
+                uiToBe.classList.add('opacity-0', 'z-0');
+            });
+
+            btnToBe.addEventListener('click', () => {
+                btnToBe.className = "px-6 py-2 rounded-md font-medium transition-all bg-accent-teal text-white shadow-sm";
+                btnAsIs.className = "px-6 py-2 rounded-md font-medium transition-all text-corporate-300 hover:text-white";
+                uiToBe.classList.remove('opacity-0', 'z-0');
+                uiToBe.classList.add('opacity-100', 'z-10');
+                uiAsIs.classList.remove('opacity-100', 'z-10');
+                uiAsIs.classList.add('opacity-0', 'z-0');
+            });
+        }
+
+        // Regulatory Data Rendering
+        function renderRegulations() {
+            const listContainer = document.getElementById('regulation-list');
+            
+            regulatoryData.forEach((reg, index) => {
+                const card = document.createElement('div');
+                card.className = `reg-card cursor-pointer bg-white rounded-lg p-4 border border-corporate-200 hover:border-corporate-400 hover:shadow-md transition-all flex items-center space-x-4 ${index === 0 ? 'ring-2 ring-corporate-400' : ''}`;
+                card.onclick = () => showRegulationDetail(reg.id, card);
+                
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center ${reg.bgColor} ${reg.color} text-xl flex-shrink-0">
+                        <i class="fas ${reg.icon}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-corporate-800">${reg.title}</h4>
+                        <p class="text-xs text-corporate-500">${reg.subtitle}</p>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+
+            // Initialize first detail safely using firstElementChild
+            if(regulatoryData.length > 0) {
+                showRegulationDetail(regulatoryData[0].id, listContainer.firstElementChild);
+            }
+        }
+
+        function showRegulationDetail(id, activeCardElement) {
+            // Update active state in list
+            document.querySelectorAll('.reg-card').forEach(c => c.classList.remove('ring-2', 'ring-corporate-400'));
+            if(activeCardElement && activeCardElement.classList) {
+                activeCardElement.classList.add('ring-2', 'ring-corporate-400');
+            }
+
+            const reg = regulatoryData.find(r => r.id === id);
+            const detailContainer = document.getElementById('regulation-detail');
+            
+            let riskBadgeClass = "bg-gray-100 text-gray-800";
+            if (reg.details.riskLevel === 'CRITICO') riskBadgeClass = "bg-red-100 text-red-800 border border-red-200";
+            if (reg.details.riskLevel === 'ALTO') riskBadgeClass = "bg-orange-100 text-orange-800 border border-orange-200";
+            if (reg.details.riskLevel === 'MEDIO') riskBadgeClass = "bg-amber-100 text-amber-800 border border-amber-200";
+
+            const obligationsHtml = reg.details.obligations.map(o => `<li class="flex items-start mb-2"><i class="fas fa-caret-right text-corporate-400 mt-1 mr-2"></i><span>${o}</span></li>`).join('');
+
+            detailContainer.innerHTML = `
+                <div class="flex items-center justify-between border-b border-corporate-100 pb-4 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-full flex items-center justify-center ${reg.bgColor} ${reg.color} text-2xl">
+                            <i class="fas ${reg.icon}"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-corporate-900">${reg.title}</h2>
+                            <p class="text-corporate-500 font-medium">${reg.subtitle}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-corporate-400 uppercase tracking-wider block mb-1">Rischio</span>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${riskBadgeClass}">${reg.details.riskLevel}</span>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="text-sm font-bold text-corporate-400 uppercase tracking-wider mb-3">Obblighi Normativi</h4>
+                        <ul class="text-corporate-700 text-sm">
+                            ${obligationsHtml}
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-red-50 p-4 rounded-lg border border-red-100">
+                        <h4 class="text-sm font-bold text-accent-red uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-exclamation-circle mr-2"></i> Rischio di Non-Compliance</h4>
+                        <p class="text-sm text-corporate-800">${reg.details.risk}</p>
+                    </div>
+
+                    <div>
+                        <h4 class="text-sm font-bold text-corporate-400 uppercase tracking-wider mb-2">Impatti Architetturali</h4>
+                        <p class="text-sm text-corporate-700 bg-corporate-50 p-3 rounded border border-corporate-100">${reg.details.impact}</p>
+                    </div>
+
+                    <div class="border-t border-corporate-100 pt-4">
+                        <h4 class="text-sm font-bold text-accent-teal uppercase tracking-wider mb-2 flex items-center"><i class="fas fa-tools mr-2"></i> Remediation Plan</h4>
+                        <p class="text-sm font-medium text-corporate-800">${reg.details.remediation}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- 3. CHART.JS IMPLEMENTATION ---
+        function renderMaturityChart() {
+            const ctx = document.getElementById('maturityChart').getContext('2d');
+            
+            // Data from the report: As-Is vs To-Be scores
+            const labels = ['UX Transparency', 'Audit Trail', 'Recesso Digitale', 'AI Governance', 'Cyber-Resilience'];
+            const dataAsIs = [1.5, 1.0, 0.5, 0.5, 1.5];
+            const dataToBe = [5.0, 5.0, 5.0, 4.0, 5.0];
+
+            state.maturityChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'As-Is (Stato Attuale)',
+                            data: dataAsIs,
+                            backgroundColor: 'rgba(220, 38, 38, 0.2)', // Red
+                            borderColor: 'rgba(220, 38, 38, 1)',
+                            pointBackgroundColor: 'rgba(220, 38, 38, 1)',
+                            borderWidth: 2,
+                            fill: true
+                        },
+                        {
+                            label: 'To-Be (Target Target)',
+                            data: dataToBe,
+                            backgroundColor: 'rgba(13, 148, 136, 0.2)', // Teal
+                            borderColor: 'rgba(13, 148, 136, 1)',
+                            pointBackgroundColor: 'rgba(13, 148, 136, 1)',
+                            borderWidth: 2,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                            pointLabels: {
+                                font: { family: "'Inter', sans-serif", size: 12, weight: '600' },
+                                color: '#334155'
+                            },
+                            ticks: {
+                                min: 0,
+                                max: 5,
+                                stepSize: 1,
+                                backdropColor: 'transparent',
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: "'Inter', sans-serif" },
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: "'Inter', sans-serif", size: 13 },
+                            bodyFont: { family: "'Inter', sans-serif", size: 13 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.raw} / 5.0`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            setupNavigation();
+            setupUXToggle();
+            renderRegulations();
+        });
+
+    </script>
+</body>
 </html>
