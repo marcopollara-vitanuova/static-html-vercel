@@ -1,0 +1,13 @@
+---
+description: Deploy HTML statico su Vercel via GitHub
+globs: index.html
+alwaysApply: false
+---
+
+# HTML statico su Vercel
+
+- Il sito è servito da `index.html` nella root; nessun build step.
+- Dopo il primo setup (repo collegato a Vercel), ogni `git commit` + `git push` attiva un deploy automatico.
+- Per un **nuovo** setup completo, segui la skill `deploy-static-html-vercel` (`/deploy-static-html-vercel`).
+- Non rifare `vercel link` o `vercel git connect` a ogni modifica del file.
+- Produzione su `main`: chiedi conferma esplicita prima di `vercel --prod`.
