@@ -8,17 +8,15 @@ Pagina HTML statica di esempio, pronta per Vercel + GitHub.
 |------|--------|
 | `index.html` | Fatto |
 | Repo GitHub | [marcopollara-vitanuova/static-html-vercel](https://github.com/marcopollara-vitanuova/static-html-vercel) |
-| Vercel link / deploy | **In attesa di `vercel login`** |
+| Vercel link / deploy | **Live** |
 
-## Completa il deploy Vercel
+## URL
 
-```bash
-vercel login
-cd /Users/m/static-html-vercel
-./scripts/finish-vercel-deploy.sh
-```
+- **Production:** https://static-html-vercel-theta.vercel.app
+- **Dashboard:** https://vercel.com/vitanuova/static-html-vercel
+- **GitHub:** https://github.com/marcopollara-vitanuova/static-html-vercel
 
-Oppure chiedi all'agente Cursor: `/deploy-static-html-vercel` (dopo il login).
+Ogni `git push` su `main` attiva un nuovo deploy automatico.
 
 ## Cursor
 
